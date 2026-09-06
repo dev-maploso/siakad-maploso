@@ -1,32 +1,6 @@
 import { defineStore } from "pinia";
 import AuthService from "@/services/auth.service";
-
-export interface Kelas {
-  id: number;
-  wali_kelas_id: number;
-  nama_kelas: string;
-  kode_kelas: string;
-  fraksi_id: number;
-  semester_id: number;
-  tahun_ajaran_id: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-  roles: string[];
-
-  kelas: Kelas[];
-}
-
-interface AuthState {
-  token: string | null;
-  user: User | null;
-  loading: boolean;
-}
+import type { AuthState, User } from "@/types/auth";
 
 export const useAuthStore = defineStore("auth", {
   state: (): AuthState => ({
@@ -36,35 +10,47 @@ export const useAuthStore = defineStore("auth", {
   }),
 
   getters: {
-    isLoggedIn: (state) => !!state.token,
-
-    isWaliKelas: (state) =>
-      state.user?.roles.includes("wali_kelas") ?? false,
-
-    isMimin: (state) =>
-      state.user?.roles.includes("mimin") ?? false,
+    /**
+     * Apakah user memiliki token login?
+     */
+    isLoggedIn: (state): boolean => {
+      return !!state.token;
+    },
 
     /**
-     * Seluruh kelas yang diampu user
+     * Apakah data Mahasantri sudah tersedia?
      */
-    kelas: (state) => state.user?.kelas ?? [],
+    isMahasantri: (state): boolean => {
+      return !!state.user;
+    },
 
     /**
-     * Default kelas pertama
+     * Apakah Mahasantri aktif?
      */
-    defaultKelas: (state) => state.user?.kelas?.[0] ?? null,
+    isActive: (state): boolean => {
+      return state.user?.is_active ?? false;
+    },
   },
 
   actions: {
+    /**
+     * Simpan token
+     */
     setToken(token: string) {
       this.token = token;
       localStorage.setItem("token", token);
     },
 
+    /**
+     * Simpan data user / Mahasantri
+     */
     setUser(user: User) {
       this.user = user;
     },
 
+    /**
+     * Hapus seluruh session
+     */
     clear() {
       this.token = null;
       this.user = null;
@@ -73,9 +59,12 @@ export const useAuthStore = defineStore("auth", {
     },
 
     /**
-     * Login
+     * Login Mahasantri
      */
-    async login(email: string, password: string) {
+    async login(
+      email: string,
+      password: string
+    ): Promise<void> {
       this.loading = true;
 
       try {
@@ -84,50 +73,95 @@ export const useAuthStore = defineStore("auth", {
           password,
         });
 
-        this.setToken(response.data.data.token);
+        const token = response.data?.data?.token;
 
+        if (!token) {
+          throw new Error(
+            "Token login tidak ditemukan."
+          );
+        }
+
+        this.setToken(token);
+
+        /**
+         * Setelah login berhasil,
+         * ambil profil Mahasantri.
+         */
         await this.fetchMe();
+      } catch (error) {
+        this.clear();
+
+        console.error(
+          "LOGIN ERROR:",
+          error
+        );
+
+        throw error;
       } finally {
         this.loading = false;
       }
     },
 
     /**
-     * Ambil profil user
+     * Ambil profil Mahasantri yang sedang login
      */
-    async fetchMe() {
+    async fetchMe(): Promise<User> {
       const response = await AuthService.me();
 
-      this.setUser(response.data.data);
+      const user = response.data?.data as User;
+
+      if (!user) {
+        throw new Error(
+          "Data Mahasantri tidak ditemukan."
+        );
+      }
+
+      this.setUser(user);
+
+      return user;
     },
 
     /**
      * Logout
      */
-    async logout() {
+    async logout(): Promise<void> {
       try {
-        await AuthService.logout();
-      } catch {
-        // Abaikan jika token sudah tidak valid
+        if (this.token) {
+          await AuthService.logout();
+        }
+      } catch (error) {
+        console.error(
+          "LOGOUT ERROR:",
+          error
+        );
+      } finally {
+        this.clear();
       }
-
-      this.clear();
     },
 
     /**
-     * Restore session saat aplikasi pertama kali dibuka
+     * Restore session ketika aplikasi dibuka kembali
      */
-    async restore() {
+    async restore(): Promise<boolean> {
       if (!this.token) {
-        return;
+        return false;
       }
 
       this.loading = true;
 
       try {
         await this.fetchMe();
-      } catch {
+
+        return true;
+      } catch (error) {
+        console.error(
+          "RESTORE ERROR:",
+          error
+        );
+
         this.clear();
+
+        return false;
       } finally {
         this.loading = false;
       }
