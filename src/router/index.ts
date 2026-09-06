@@ -64,6 +64,15 @@ const router = createRouter({
             title: "Profil",
           },
         },
+
+        {
+          path: "/classes",
+          name: "classes",
+          component: () => import("@/views/kelas/KelasView.vue"),
+          meta: {
+            requiresAuth: true,
+          },
+        },
       ],
     },
 

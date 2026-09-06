@@ -14,6 +14,7 @@ import {
   User,
   LogOut,
   ChevronDown,
+  School,
 } from "lucide-vue-next";
 
 import { ref } from "vue";
@@ -37,6 +38,12 @@ const menus = [
     icon: LayoutDashboard,
     to: "/dashboard",
     match: (path: string) => path === "/dashboard",
+  },
+    {
+    title: "Kelas",
+    icon: School,
+    to: "/classes",
+    match: (path: string) => path.startsWith("/classes"),
   },
   {
     title: "Jadwal Kuliah",
