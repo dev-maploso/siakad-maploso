@@ -5,13 +5,13 @@ export type AttendanceStatus =
   | "alpha";
 
 export interface AttendanceRegistrationClass {
-  id: number;
+  id: number | null;
   nama: string | null;
   kode: string | null;
 }
 
 export interface AttendanceSemester {
-  id: number;
+  id: number | null;
   nama: string | null;
 }
 
@@ -39,6 +39,11 @@ export interface AttendanceItem {
   keterangan: string | null;
 }
 
+export interface AttendancePeriod {
+  tanggal_mulai: string | null;
+  tanggal_selesai: string | null;
+}
+
 export interface AttendancePagination {
   total: number;
   per_page: number;
@@ -50,7 +55,11 @@ export interface AttendancePagination {
 
 export interface AttendanceData {
   registrasi_kelas: AttendanceRegistration;
+
+  periode: AttendancePeriod;
+
   summary: AttendanceSummary;
+
   attendance: AttendanceItem[];
 }
 

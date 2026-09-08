@@ -16,6 +16,12 @@ interface AttendanceState {
 
   page: number;
   perPage: number;
+
+  tanggalMulai: string | null;
+  tanggalSelesai: string | null;
+
+  registrasiKelasId: number | null;
+  semesterId: number | null;
 }
 
 export const useAttendanceStore = defineStore(
@@ -30,6 +36,12 @@ export const useAttendanceStore = defineStore(
 
       page: 1,
       perPage: 15,
+
+      tanggalMulai: null,
+      tanggalSelesai: null,
+
+      registrasiKelasId: null,
+      semesterId: null,
     }),
 
     getters: {
@@ -41,6 +53,9 @@ export const useAttendanceStore = defineStore(
 
       items: (state) =>
         state.data?.attendance ?? [],
+
+      periode: (state) =>
+        state.data?.periode ?? null,
 
       hasData: (state): boolean =>
         !!state.data,
@@ -56,17 +71,61 @@ export const useAttendanceStore = defineStore(
 
       lastPage: (state): number =>
         state.pagination?.last_page ?? 1,
+
+      hasPreviousPage: (state): boolean =>
+        state.page > 1,
+
+      hasNextPage: (state): boolean =>
+        !!state.pagination &&
+        state.page < state.pagination.last_page,
     },
 
     actions: {
       async fetchHistory(
         registrasiKelasId: number,
         semesterId: number,
-        page = 1
+        page = 1,
+        tanggalMulai?: string | null,
+        tanggalSelesai?: string | null,
       ): Promise<void> {
 
         this.loading = true;
         this.error = null;
+
+        /*
+        |--------------------------------------------------------------------------
+        | SIMPAN FILTER AKTIF
+        |--------------------------------------------------------------------------
+        |
+        | Filter disimpan di store supaya ketika pagination berubah,
+        | tanggal yang sedang dipilih tetap digunakan.
+        |
+        */
+
+        this.registrasiKelasId =
+          registrasiKelasId;
+
+        this.semesterId =
+          semesterId;
+
+        /*
+        | Jika parameter tanggal tidak diberikan,
+        | gunakan tanggal yang sudah tersimpan di store.
+        */
+
+        if (
+          tanggalMulai !== undefined
+        ) {
+          this.tanggalMulai =
+            tanggalMulai || null;
+        }
+
+        if (
+          tanggalSelesai !== undefined
+        ) {
+          this.tanggalSelesai =
+            tanggalSelesai || null;
+        }
 
         try {
           const response =
@@ -74,16 +133,26 @@ export const useAttendanceStore = defineStore(
               registrasi_kelas_id:
                 registrasiKelasId,
 
-              semester_id: semesterId,
+              semester_id:
+                semesterId,
+
+              tanggal_mulai:
+                this.tanggalMulai ?? undefined,
+
+              tanggal_selesai:
+                this.tanggalSelesai ?? undefined,
 
               page,
 
-              per_page: this.perPage,
+              per_page:
+                this.perPage,
             });
 
-          const result = response.data;
+          const result =
+            response.data;
 
-          this.data = result.data;
+          this.data =
+            result.data;
 
           this.pagination =
             result.pagination;
@@ -107,6 +176,8 @@ export const useAttendanceStore = defineStore(
 
           this.error =
             error?.response?.data?.message ??
+            error?.response?.data?.errors?.tanggal_mulai?.[0] ??
+            error?.response?.data?.errors?.tanggal_selesai?.[0] ??
             "Gagal mengambil data kehadiran.";
 
           throw error;
@@ -116,46 +187,65 @@ export const useAttendanceStore = defineStore(
         }
       },
 
+      /*
+      |--------------------------------------------------------------------------
+      | NEXT PAGE
+      |--------------------------------------------------------------------------
+      */
+
       async nextPage() {
         if (
-          this.pagination &&
-          this.page <
+          !this.pagination ||
+          this.page >=
             this.pagination.last_page
         ) {
-
-          const registration =
-            this.data?.registrasi_kelas;
-
-          if (!registration) {
-            return;
-          }
-
-          await this.fetchHistory(
-            registration.id,
-            registration.semester.id,
-            this.page + 1
-          );
+          return;
         }
+
+        if (
+          !this.registrasiKelasId ||
+          !this.semesterId
+        ) {
+          return;
+        }
+
+        await this.fetchHistory(
+          this.registrasiKelasId,
+          this.semesterId,
+          this.page + 1,
+        );
       },
+
+      /*
+      |--------------------------------------------------------------------------
+      | PREVIOUS PAGE
+      |--------------------------------------------------------------------------
+      */
 
       async previousPage() {
         if (this.page <= 1) {
           return;
         }
 
-        const registration =
-          this.data?.registrasi_kelas;
-
-        if (!registration) {
+        if (
+          !this.registrasiKelasId ||
+          !this.semesterId
+        ) {
           return;
         }
 
         await this.fetchHistory(
-          registration.id,
-          registration.semester.id,
-          this.page - 1
+          this.registrasiKelasId,
+          this.semesterId,
+          this.page - 1,
         );
       },
+
+      /*
+      |--------------------------------------------------------------------------
+      | GO TO PAGE
+      |--------------------------------------------------------------------------
+      */
 
       async goToPage(page: number) {
         if (page < 1) {
@@ -164,31 +254,80 @@ export const useAttendanceStore = defineStore(
 
         if (
           this.pagination &&
-          page > this.pagination.last_page
+          page >
+            this.pagination.last_page
         ) {
           return;
         }
 
-        const registration =
-          this.data?.registrasi_kelas;
-
-        if (!registration) {
+        if (
+          !this.registrasiKelasId ||
+          !this.semesterId
+        ) {
           return;
         }
 
         await this.fetchHistory(
-          registration.id,
-          registration.semester.id,
-          page
+          this.registrasiKelasId,
+          this.semesterId,
+          page,
         );
       },
 
+      /*
+      |--------------------------------------------------------------------------
+      | SET DATE FILTER
+      |--------------------------------------------------------------------------
+      */
+
+      setDateFilter(
+        tanggalMulai: string | null,
+        tanggalSelesai: string | null,
+      ) {
+        this.tanggalMulai =
+          tanggalMulai || null;
+
+        this.tanggalSelesai =
+          tanggalSelesai || null;
+      },
+
+      /*
+      |--------------------------------------------------------------------------
+      | CLEAR DATE FILTER
+      |--------------------------------------------------------------------------
+      */
+
+      clearDateFilter() {
+        this.tanggalMulai = null;
+        this.tanggalSelesai = null;
+      },
+
+      /*
+      |--------------------------------------------------------------------------
+      | CLEAR STORE
+      |--------------------------------------------------------------------------
+      */
+
       clear() {
         this.data = null;
+
         this.pagination = null;
+
         this.loading = false;
+
         this.error = null;
+
         this.page = 1;
+
+        this.perPage = 15;
+
+        this.tanggalMulai = null;
+
+        this.tanggalSelesai = null;
+
+        this.registrasiKelasId = null;
+
+        this.semesterId = null;
       },
     },
   }

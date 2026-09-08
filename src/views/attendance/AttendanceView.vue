@@ -15,6 +15,8 @@ import {
   AlertCircle,
   ChevronDown,
   LoaderCircle,
+  Filter,
+  Search,
 } from "lucide-vue-next";
 
 import { useRegistrasiKelasStore } from "@/stores/registrasi-kelas";
@@ -26,8 +28,29 @@ const kelasStore =
 const attendanceStore =
   useAttendanceStore();
 
+/*
+|--------------------------------------------------------------------------
+| STATE
+|--------------------------------------------------------------------------
+*/
+
 const selectedRegistrasiKelasId =
   ref<number | null>(null);
+
+const tanggalMulai =
+  ref<string>("");
+
+const tanggalSelesai =
+  ref<string>("");
+
+const filterError =
+  ref<string | null>(null);
+
+/*
+|--------------------------------------------------------------------------
+| COMPUTED
+|--------------------------------------------------------------------------
+*/
 
 const kelasItems = computed(() => {
   return kelasStore.items;
@@ -45,12 +68,19 @@ const attendanceItems = computed(() => {
   return attendanceStore.items;
 });
 
+const attendancePercentage =
+  computed(() => {
+    return (
+      summary.value
+        ?.persentase_kehadiran ?? 0
+    );
+  });
 
-/**
- * =========================================================
- * LOAD KELAS
- * =========================================================
- */
+/*
+|--------------------------------------------------------------------------
+| LOAD KELAS
+|--------------------------------------------------------------------------
+*/
 
 async function loadKelas() {
   try {
@@ -66,19 +96,74 @@ async function loadKelas() {
   }
 }
 
+/*
+|--------------------------------------------------------------------------
+| VALIDASI TANGGAL
+|--------------------------------------------------------------------------
+*/
 
-/**
- * =========================================================
- * PILIH KELAS
- * =========================================================
- */
+function validateDateRange(): boolean {
+  filterError.value = null;
 
-async function handleKelasChange() {
+  if (
+    tanggalMulai.value &&
+    tanggalSelesai.value &&
+    tanggalMulai.value >
+      tanggalSelesai.value
+  ) {
+    filterError.value =
+      "Tanggal mulai tidak boleh lebih besar dari tanggal selesai.";
+
+    return false;
+  }
+
+  return true;
+}
+
+/*
+|--------------------------------------------------------------------------
+| PILIH KELAS
+|--------------------------------------------------------------------------
+|
+| Ketika kelas diganti, kita hanya membersihkan data attendance.
+| Filter tanggal tetap dipertahankan supaya user tidak perlu
+| memilih ulang tanggal.
+|
+*/
+
+function handleKelasChange() {
+  filterError.value = null;
+
   attendanceStore.clear();
 
   if (
     !selectedRegistrasiKelasId.value
   ) {
+    return;
+  }
+}
+
+/*
+|--------------------------------------------------------------------------
+| LOAD ATTENDANCE
+|--------------------------------------------------------------------------
+*/
+
+async function loadAttendance(
+  page = 1
+) {
+  filterError.value = null;
+
+  if (
+    !selectedRegistrasiKelasId.value
+  ) {
+    filterError.value =
+      "Silakan pilih kelas terlebih dahulu.";
+
+    return;
+  }
+
+  if (!validateDateRange()) {
     return;
   }
 
@@ -90,11 +175,14 @@ async function handleKelasChange() {
     );
 
   if (!selected) {
+    filterError.value =
+      "Data kelas tidak ditemukan.";
+
     return;
   }
 
   if (!selected.semester?.id) {
-    attendanceStore.error =
+    filterError.value =
       "Semester kelas tidak ditemukan.";
 
     return;
@@ -104,24 +192,34 @@ async function handleKelasChange() {
     await attendanceStore.fetchHistory(
       selected.id,
       selected.semester.id,
-      1
+      page,
+      tanggalMulai.value || null,
+      tanggalSelesai.value || null,
     );
   } catch {
     // Error sudah ditangani store.
   }
 }
 
+/*
+|--------------------------------------------------------------------------
+| TAMPILKAN
+|--------------------------------------------------------------------------
+*/
 
-/**
- * =========================================================
- * FORMAT TANGGAL
- * =========================================================
- */
+async function handleFilter() {
+  await loadAttendance(1);
+}
+
+/*
+|--------------------------------------------------------------------------
+| FORMAT TANGGAL
+|--------------------------------------------------------------------------
+*/
 
 function formatTanggal(
   tanggal: string | null
 ): string {
-
   if (!tanggal) {
     return "-";
   }
@@ -142,18 +240,85 @@ function formatTanggal(
   ).format(date);
 }
 
+/*
+|--------------------------------------------------------------------------
+| FORMAT TANGGAL SINGKAT
+|--------------------------------------------------------------------------
+*/
 
-/**
- * =========================================================
- * STATUS
- * =========================================================
- */
+function formatTanggalHari(
+  tanggal: string | null
+): string {
+  if (!tanggal) {
+    return "-";
+  }
+
+  /*
+  | Ambil langsung YYYY-MM-DD supaya
+  | tidak bergeser timezone.
+  */
+
+  const parts =
+    tanggal.split("-");
+
+  if (parts.length !== 3) {
+    return "-";
+  }
+
+  return parts[2];
+}
+
+function formatBulan(
+  tanggal: string | null
+): string {
+  if (!tanggal) {
+    return "-";
+  }
+
+  const parts =
+    tanggal.split("-");
+
+  if (parts.length !== 3) {
+    return "-";
+  }
+
+  const month =
+    Number(parts[1]);
+
+  if (
+    Number.isNaN(month) ||
+    month < 1 ||
+    month > 12
+  ) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat(
+    "id-ID",
+    {
+      month: "short",
+    }
+  ).format(
+    new Date(
+      2020,
+      month - 1,
+      1
+    )
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| STATUS
+|--------------------------------------------------------------------------
+*/
 
 function getStatusLabel(
   status: string
 ): string {
-
-  switch (status.toLowerCase()) {
+  switch (
+    status.toLowerCase()
+  ) {
     case "hadir":
       return "Hadir";
 
@@ -171,12 +336,12 @@ function getStatusLabel(
   }
 }
 
-
 function getStatusClass(
   status: string
 ): string {
-
-  switch (status.toLowerCase()) {
+  switch (
+    status.toLowerCase()
+  ) {
     case "hadir":
       return "status-hadir";
 
@@ -194,18 +359,18 @@ function getStatusClass(
   }
 }
 
-
-/**
- * =========================================================
- * STATUS ICON
- * =========================================================
- */
+/*
+|--------------------------------------------------------------------------
+| STATUS ICON
+|--------------------------------------------------------------------------
+*/
 
 function getStatusIcon(
   status: string
 ) {
-
-  switch (status.toLowerCase()) {
+  switch (
+    status.toLowerCase()
+  ) {
     case "hadir":
       return UserCheck;
 
@@ -223,65 +388,36 @@ function getStatusIcon(
   }
 }
 
-
-/**
- * =========================================================
- * PERSENTASE
- * =========================================================
- */
-
-const attendancePercentage =
-  computed(() => {
-
-    return (
-      summary.value
-        ?.persentase_kehadiran ?? 0
-    );
-  });
-
-
-/**
- * =========================================================
- * RETRY
- * =========================================================
- */
+/*
+|--------------------------------------------------------------------------
+| RETRY
+|--------------------------------------------------------------------------
+*/
 
 async function retry() {
-
   if (
-    !selectedRegistrasiKelasId.value
+    !attendanceStore.registrasiKelasId ||
+    !attendanceStore.semesterId
   ) {
-    return;
-  }
-
-  const selected =
-    kelasItems.value.find(
-      (item) =>
-        item.id ===
-        selectedRegistrasiKelasId.value
-    );
-
-  if (!selected?.semester?.id) {
     return;
   }
 
   try {
     await attendanceStore.fetchHistory(
-      selected.id,
-      selected.semester.id,
-      attendanceStore.page
+      attendanceStore.registrasiKelasId,
+      attendanceStore.semesterId,
+      attendanceStore.page,
     );
   } catch {
     // handled by store
   }
 }
 
-
-/**
- * =========================================================
- * PAGINATION
- * =========================================================
- */
+/*
+|--------------------------------------------------------------------------
+| PAGINATION
+|--------------------------------------------------------------------------
+*/
 
 async function previousPage() {
   await attendanceStore.previousPage();
@@ -291,12 +427,11 @@ async function nextPage() {
   await attendanceStore.nextPage();
 }
 
-
-/**
- * =========================================================
- * INITIAL
- * =========================================================
- */
+/*
+|--------------------------------------------------------------------------
+| INITIAL
+|--------------------------------------------------------------------------
+*/
 
 onMounted(async () => {
   await loadKelas();
@@ -304,7 +439,6 @@ onMounted(async () => {
 </script>
 
 <template>
-
   <div class="attendance-page">
 
     <!-- =====================================================
@@ -312,9 +446,7 @@ onMounted(async () => {
          ===================================================== -->
 
     <header class="attendance-header">
-
       <div>
-
         <p class="eyebrow">
           AKADEMIK
         </p>
@@ -325,16 +457,14 @@ onMounted(async () => {
 
         <p class="header-description">
           Lihat riwayat dan rekap kehadiran
-          berdasarkan kelas dan semester.
+          berdasarkan kelas dan periode.
         </p>
-
       </div>
-
     </header>
 
 
     <!-- =====================================================
-         SELECTOR
+         FILTER
          ===================================================== -->
 
     <section class="attendance-selector">
@@ -346,28 +476,27 @@ onMounted(async () => {
         </div>
 
         <div>
-
           <h2>
-            Pilih Kelas
+            Filter Kehadiran
           </h2>
 
           <p>
-            Pilih kelas dan semester untuk
-            melihat kehadiran.
+            Pilih kelas, semester, dan
+            periode kehadiran.
           </p>
-
         </div>
 
       </div>
 
 
-      <!-- LOADING KELAS -->
+      <!-- ===================================================
+           LOADING KELAS
+           =================================================== -->
 
       <div
         v-if="kelasStore.loading"
         class="selector-loading"
       >
-
         <LoaderCircle
           :size="20"
           class="loading-icon"
@@ -376,58 +505,187 @@ onMounted(async () => {
         <span>
           Memuat daftar kelas...
         </span>
-
       </div>
 
 
-      <!-- DROPDOWN -->
+      <!-- ===================================================
+           FILTER FORM
+           =================================================== -->
 
       <div
         v-else
-        class="select-wrapper"
+        class="filter-form"
       >
 
-        <select
-          v-model="selectedRegistrasiKelasId"
-          class="kelas-select"
-          @change="handleKelasChange"
+        <!-- KELAS -->
+
+        <div class="filter-field filter-field-full">
+
+          <label
+            for="kelas"
+            class="filter-label"
+          >
+            Kelas / Semester
+          </label>
+
+          <div class="select-wrapper">
+
+            <select
+              id="kelas"
+              v-model="
+                selectedRegistrasiKelasId
+              "
+              class="kelas-select"
+              @change="handleKelasChange"
+            >
+
+              <option :value="null">
+                Pilih kelas / semester...
+              </option>
+
+              <option
+                v-for="item in kelasItems"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{
+                  item.kelas?.nama_kelas ||
+                  "Kelas tidak tersedia"
+                }}
+                -
+                {{
+                  item.tahun_ajaran?.nama ||
+                  "-"
+                }}
+                {{
+                  item.semester?.nama ||
+                  ""
+                }}
+              </option>
+
+            </select>
+
+            <ChevronDown
+              :size="18"
+              class="select-icon"
+            />
+
+          </div>
+
+        </div>
+
+
+        <!-- TANGGAL -->
+
+        <div class="date-filter">
+
+          <!-- TANGGAL MULAI -->
+
+          <div class="filter-field">
+
+            <label
+              for="tanggal-mulai"
+              class="filter-label"
+            >
+              Tanggal Mulai
+            </label>
+
+            <div class="date-input-wrapper">
+
+              <CalendarDays
+                :size="17"
+                class="date-input-icon"
+              />
+
+              <input
+                id="tanggal-mulai"
+                v-model="tanggalMulai"
+                type="date"
+                class="date-input"
+              />
+
+            </div>
+
+          </div>
+
+
+          <!-- TANGGAL SELESAI -->
+
+          <div class="filter-field">
+
+            <label
+              for="tanggal-selesai"
+              class="filter-label"
+            >
+              Tanggal Selesai
+            </label>
+
+            <div class="date-input-wrapper">
+
+              <CalendarDays
+                :size="17"
+                class="date-input-icon"
+              />
+
+              <input
+                id="tanggal-selesai"
+                v-model="tanggalSelesai"
+                type="date"
+                class="date-input"
+              />
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- FILTER ERROR -->
+
+        <div
+          v-if="filterError"
+          class="filter-error"
+        >
+          <AlertCircle :size="16" />
+
+          <span>
+            {{ filterError }}
+          </span>
+        </div>
+
+
+        <!-- BUTTON -->
+
+        <button
+          type="button"
+          class="filter-button"
+          :disabled="
+            attendanceStore.loading
+          "
+          @click="handleFilter"
         >
 
-          <option :value="null">
-            Pilih kelas / semester...
-          </option>
+          <LoaderCircle
+            v-if="attendanceStore.loading"
+            :size="17"
+            class="button-loading"
+          />
 
-          <option
-            v-for="item in kelasItems"
-            :key="item.id"
-            :value="item.id"
-          >
+          <Search
+            v-else
+            :size="17"
+          />
 
+          <span>
             {{
-              item.kelas.nama_kelas ||
-              "Kelas tidak tersedia"
+              attendanceStore.loading
+                ? "Memuat..."
+                : "Tampilkan Kehadiran"
             }}
+          </span>
 
-            -
-
-            {{
-              item.tahun_ajaran?.nama ||
-              "-"
-            }}
-
-            {{
-              item.semester?.nama ||
-              ""
-            }}
-
-          </option>
-
-        </select>
-
-        <ChevronDown
-          :size="18"
-          class="select-icon"
-        />
+        </button>
 
       </div>
 
@@ -435,32 +693,14 @@ onMounted(async () => {
 
 
     <!-- =====================================================
-         LOADING ATTENDANCE
+         ERROR ATTENDANCE
          ===================================================== -->
 
     <div
-      v-if="attendanceStore.loading"
-      class="loading-state"
-    >
-
-      <LoaderCircle
-        :size="32"
-        class="loading-spinner"
-      />
-
-      <p>
-        Memuat data kehadiran...
-      </p>
-
-    </div>
-
-
-    <!-- =====================================================
-         ERROR
-         ===================================================== -->
-
-    <div
-      v-else-if="attendanceStore.error"
+      v-if="
+        !attendanceStore.loading &&
+        attendanceStore.error
+      "
       class="error-state"
     >
 
@@ -492,6 +732,27 @@ onMounted(async () => {
 
 
     <!-- =====================================================
+         LOADING ATTENDANCE
+         ===================================================== -->
+
+    <div
+      v-else-if="attendanceStore.loading"
+      class="loading-state"
+    >
+
+      <LoaderCircle
+        :size="32"
+        class="loading-spinner"
+      />
+
+      <p>
+        Memuat data kehadiran...
+      </p>
+
+    </div>
+
+
+    <!-- =====================================================
          DETAIL
          ===================================================== -->
 
@@ -500,7 +761,9 @@ onMounted(async () => {
       class="attendance-content"
     >
 
-      <!-- CLASS INFO -->
+      <!-- ===================================================
+           CLASS INFO
+           =================================================== -->
 
       <section class="class-info-card">
 
@@ -532,6 +795,33 @@ onMounted(async () => {
               }}
             </span>
 
+            <span
+              v-if="
+                attendanceStore.tanggalMulai ||
+                attendanceStore.tanggalSelesai
+              "
+            >
+              <Filter :size="14" />
+
+              {{
+                attendanceStore.tanggalMulai
+                  ? formatTanggal(
+                      attendanceStore.tanggalMulai
+                    )
+                  : "Awal"
+              }}
+
+              -
+
+              {{
+                attendanceStore.tanggalSelesai
+                  ? formatTanggal(
+                      attendanceStore.tanggalSelesai
+                    )
+                  : "Sekarang"
+              }}
+            </span>
+
           </div>
 
         </div>
@@ -554,7 +844,6 @@ onMounted(async () => {
           </div>
 
           <div>
-
             <p>
               Total Pertemuan
             </p>
@@ -564,7 +853,6 @@ onMounted(async () => {
                 summary?.total_pertemuan ?? 0
               }}
             </strong>
-
           </div>
 
         </div>
@@ -579,7 +867,6 @@ onMounted(async () => {
           </div>
 
           <div>
-
             <p>
               Hadir
             </p>
@@ -589,7 +876,6 @@ onMounted(async () => {
                 summary?.hadir ?? 0
               }}
             </strong>
-
           </div>
 
         </div>
@@ -604,7 +890,6 @@ onMounted(async () => {
           </div>
 
           <div>
-
             <p>
               Izin
             </p>
@@ -614,7 +899,6 @@ onMounted(async () => {
                 summary?.izin ?? 0
               }}
             </strong>
-
           </div>
 
         </div>
@@ -629,7 +913,6 @@ onMounted(async () => {
           </div>
 
           <div>
-
             <p>
               Sakit
             </p>
@@ -639,7 +922,6 @@ onMounted(async () => {
                 summary?.sakit ?? 0
               }}
             </strong>
-
           </div>
 
         </div>
@@ -654,7 +936,6 @@ onMounted(async () => {
           </div>
 
           <div>
-
             <p>
               Alpha
             </p>
@@ -664,22 +945,19 @@ onMounted(async () => {
                 summary?.alpha ?? 0
               }}
             </strong>
-
           </div>
 
         </div>
 
 
-        <!-- PERSENTASE -->
+        <!-- PERCENTAGE -->
 
         <div class="summary-card percentage-card">
 
           <div class="percentage-circle">
-
             <strong>
               {{ attendancePercentage }}%
             </strong>
-
           </div>
 
           <div>
@@ -727,7 +1005,9 @@ onMounted(async () => {
         </div>
 
 
-        <!-- EMPTY -->
+        <!-- =================================================
+             EMPTY
+             ================================================= -->
 
         <div
           v-if="!attendanceStore.hasItems"
@@ -743,14 +1023,17 @@ onMounted(async () => {
           </h3>
 
           <p>
-            Belum terdapat data kehadiran
-            untuk kelas dan semester ini.
+            Tidak terdapat data kehadiran
+            pada kelas dan periode yang
+            dipilih.
           </p>
 
         </div>
 
 
-        <!-- LIST -->
+        <!-- =================================================
+             LIST
+             ================================================= -->
 
         <div
           v-else
@@ -763,37 +1046,30 @@ onMounted(async () => {
             class="attendance-card"
           >
 
+            <!-- DATE -->
+
             <div class="attendance-date">
 
               <span class="date-day">
                 {{
-                  item.tanggal
-                    ? new Date(
-                        item.tanggal
-                      ).getDate()
-                    : "-"
+                  formatTanggalHari(
+                    item.tanggal
+                  )
                 }}
               </span>
 
               <span class="date-month">
                 {{
-                  item.tanggal
-                    ? new Intl.DateTimeFormat(
-                        "id-ID",
-                        {
-                          month: "short",
-                        }
-                      ).format(
-                        new Date(
-                          item.tanggal
-                        )
-                      )
-                    : "-"
+                  formatBulan(
+                    item.tanggal
+                  )
                 }}
               </span>
 
             </div>
 
+
+            <!-- MAIN -->
 
             <div class="attendance-main">
 
@@ -836,7 +1112,11 @@ onMounted(async () => {
               <div class="attendance-meta">
 
                 <span>
-                  {{ formatTanggal(item.tanggal) }}
+                  {{
+                    formatTanggal(
+                      item.tanggal
+                    )
+                  }}
                 </span>
 
                 <span
@@ -876,7 +1156,8 @@ onMounted(async () => {
           <button
             type="button"
             :disabled="
-              attendanceStore.currentPage <= 1
+              attendanceStore.currentPage <= 1 ||
+              attendanceStore.loading
             "
             @click="previousPage"
           >
@@ -894,7 +1175,8 @@ onMounted(async () => {
             type="button"
             :disabled="
               attendanceStore.currentPage >=
-              attendanceStore.lastPage
+                attendanceStore.lastPage ||
+              attendanceStore.loading
             "
             @click="nextPage"
           >
@@ -929,15 +1211,19 @@ onMounted(async () => {
       </h3>
 
       <p>
-        Pilih kelas dan semester pada dropdown
-        di atas untuk melihat riwayat kehadiran.
+        Pilih kelas dan semester pada
+        dropdown di atas, kemudian tentukan
+        periode untuk melihat riwayat
+        kehadiran.
       </p>
 
     </div>
 
   </div>
 </template>
+
 <style scoped>
+
 /* =========================================================
    PAGE
    ========================================================= */
@@ -960,31 +1246,23 @@ onMounted(async () => {
 
 .attendance-header h1 {
   margin: 0;
-
   color: #0f172a;
-
   font-size: 30px;
   font-weight: 800;
-
   letter-spacing: -0.03em;
 }
 
 .eyebrow {
   margin: 0 0 7px;
-
   color: #64748b;
-
   font-size: 11px;
   font-weight: 800;
-
   letter-spacing: 0.12em;
 }
 
 .header-description {
   margin: 8px 0 0;
-
   color: #64748b;
-
   font-size: 14px;
 }
 
@@ -995,17 +1273,11 @@ onMounted(async () => {
 
 .attendance-selector {
   max-width: 1180px;
-
   margin: 0 auto 24px;
-
   padding: 22px;
-
   background: #ffffff;
-
   border: 1px solid #e2e8f0;
-
   border-radius: 18px;
-
   box-shadow:
     0 4px 16px rgba(15, 23, 42, 0.04);
 }
@@ -1013,44 +1285,61 @@ onMounted(async () => {
 .selector-header {
   display: flex;
   align-items: center;
-
   gap: 13px;
-
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .selector-icon {
   width: 44px;
   height: 44px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   flex-shrink: 0;
-
   color: #2563eb;
-
   background: #eff6ff;
-
   border-radius: 12px;
 }
 
 .selector-header h2 {
   margin: 0;
-
   color: #0f172a;
-
   font-size: 16px;
   font-weight: 800;
 }
 
 .selector-header p {
   margin: 4px 0 0;
-
   color: #64748b;
-
   font-size: 12px;
+}
+
+
+/* =========================================================
+   FILTER FORM
+   ========================================================= */
+
+.filter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filter-field {
+  min-width: 0;
+  flex: 1;
+}
+
+.filter-field-full {
+  width: 100%;
+}
+
+.filter-label {
+  display: block;
+  margin-bottom: 7px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 
@@ -1060,30 +1349,25 @@ onMounted(async () => {
 
 .select-wrapper {
   position: relative;
-
   width: 100%;
 }
 
 .kelas-select {
   width: 100%;
-
   appearance: none;
   -webkit-appearance: none;
 
   padding: 13px 44px 13px 14px;
 
   color: #0f172a;
-
   background: #f8fafc;
 
   border: 1px solid #cbd5e1;
-
   border-radius: 10px;
 
   outline: none;
 
   font-family: inherit;
-
   font-size: 14px;
   font-weight: 600;
 
@@ -1097,13 +1381,11 @@ onMounted(async () => {
 
 .kelas-select:hover {
   background: #ffffff;
-
   border-color: #94a3b8;
 }
 
 .kelas-select:focus {
   background: #ffffff;
-
   border-color: #2563eb;
 
   box-shadow:
@@ -1112,15 +1394,12 @@ onMounted(async () => {
 
 .kelas-select option {
   color: #0f172a;
-
   background: #ffffff;
-
   font-size: 14px;
 }
 
 .select-icon {
   position: absolute;
-
   right: 14px;
   top: 50%;
 
@@ -1129,6 +1408,145 @@ onMounted(async () => {
   pointer-events: none;
 
   color: #64748b;
+}
+
+
+/* =========================================================
+   DATE FILTER
+   ========================================================= */
+
+.date-filter {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.date-input-wrapper {
+  position: relative;
+}
+
+.date-input {
+  width: 100%;
+  box-sizing: border-box;
+
+  padding: 13px 14px 13px 40px;
+
+  color: #0f172a;
+  background: #f8fafc;
+
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+
+  outline: none;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.date-input:hover {
+  background: #ffffff;
+  border-color: #94a3b8;
+}
+
+.date-input:focus {
+  background: #ffffff;
+  border-color: #2563eb;
+
+  box-shadow:
+    0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.date-input-icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  pointer-events: none;
+
+  color: #64748b;
+}
+
+
+/* =========================================================
+   FILTER ERROR
+   ========================================================= */
+
+.filter-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 10px 12px;
+
+  color: #b91c1c;
+  background: #fef2f2;
+
+  border: 1px solid #fecaca;
+  border-radius: 9px;
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+
+/* =========================================================
+   FILTER BUTTON
+   ========================================================= */
+
+.filter-button {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  padding: 12px 16px;
+
+  color: #ffffff;
+  background: #2563eb;
+
+  border: 1px solid #2563eb;
+  border-radius: 10px;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease,
+    opacity 0.2s ease;
+}
+
+.filter-button:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.filter-button:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.filter-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.button-loading {
+  animation: spin 0.8s linear infinite;
 }
 
 
@@ -1146,8 +1564,11 @@ onMounted(async () => {
   gap: 10px;
 
   color: #64748b;
-
   font-size: 13px;
+}
+
+.loading-icon {
+  animation: spin 0.8s linear infinite;
 }
 
 
@@ -1157,7 +1578,6 @@ onMounted(async () => {
 
 .attendance-content {
   max-width: 1180px;
-
   margin: 0 auto;
 }
 
@@ -1177,7 +1597,6 @@ onMounted(async () => {
   background: #ffffff;
 
   border: 1px solid #e2e8f0;
-
   border-radius: 18px;
 
   box-shadow:
@@ -1195,7 +1614,6 @@ onMounted(async () => {
   flex-shrink: 0;
 
   color: #2563eb;
-
   background: #eff6ff;
 
   border-radius: 14px;
@@ -1203,7 +1621,6 @@ onMounted(async () => {
 
 .class-info {
   min-width: 0;
-
   flex: 1;
 }
 
@@ -1228,8 +1645,9 @@ onMounted(async () => {
 .class-meta {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
 
-  gap: 16px;
+  gap: 12px 16px;
 
   margin-top: 8px;
 
@@ -1241,7 +1659,6 @@ onMounted(async () => {
 .class-meta span {
   display: inline-flex;
   align-items: center;
-
   gap: 6px;
 }
 
@@ -1272,7 +1689,6 @@ onMounted(async () => {
   background: #ffffff;
 
   border: 1px solid #e2e8f0;
-
   border-radius: 16px;
 
   transition:
@@ -1301,7 +1717,6 @@ onMounted(async () => {
   flex-shrink: 0;
 
   color: #475569;
-
   background: #f1f5f9;
 
   border-radius: 12px;
@@ -1365,11 +1780,9 @@ onMounted(async () => {
   flex-shrink: 0;
 
   color: #15803d;
-
   background: #f0fdf4;
 
   border: 3px solid #bbf7d0;
-
   border-radius: 50%;
 }
 
@@ -1418,7 +1831,6 @@ onMounted(async () => {
 .attendance-list {
   display: flex;
   flex-direction: column;
-
   gap: 10px;
 }
 
@@ -1433,7 +1845,6 @@ onMounted(async () => {
   background: #ffffff;
 
   border: 1px solid #e2e8f0;
-
   border-radius: 14px;
 
   transition:
@@ -1461,7 +1872,6 @@ onMounted(async () => {
 
   display: flex;
   flex-direction: column;
-
   align-items: center;
   justify-content: center;
 
@@ -1478,7 +1888,6 @@ onMounted(async () => {
   color: #0f172a;
 
   font-size: 18px;
-
   font-weight: 800;
 
   line-height: 1;
@@ -1490,7 +1899,6 @@ onMounted(async () => {
   color: #64748b;
 
   font-size: 9px;
-
   font-weight: 700;
 
   text-transform: uppercase;
@@ -1503,7 +1911,6 @@ onMounted(async () => {
 
 .attendance-main {
   min-width: 0;
-
   flex: 1;
 }
 
@@ -1520,7 +1927,6 @@ onMounted(async () => {
   color: #0f172a;
 
   font-size: 14px;
-
   font-weight: 700;
 }
 
@@ -1535,7 +1941,6 @@ onMounted(async () => {
   border-radius: 999px;
 
   font-size: 10px;
-
   font-weight: 750;
 }
 
@@ -1622,10 +2027,6 @@ onMounted(async () => {
   animation: spin 0.8s linear infinite;
 }
 
-.loading-icon {
-  animation: spin 0.8s linear infinite;
-}
-
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -1652,7 +2053,6 @@ onMounted(async () => {
   background: #fff7ed;
 
   border: 1px solid #fed7aa;
-
   border-radius: 16px;
 }
 
@@ -1667,7 +2067,6 @@ onMounted(async () => {
   flex-shrink: 0;
 
   color: #c2410c;
-
   background: #ffedd5;
 
   border-radius: 10px;
@@ -1687,7 +2086,6 @@ onMounted(async () => {
   color: #c2410c;
 
   font-size: 13px;
-
   line-height: 1.5;
 }
 
@@ -1704,7 +2102,6 @@ onMounted(async () => {
   background: #ffffff;
 
   border: 1px solid #e2e8f0;
-
   border-radius: 18px;
 }
 
@@ -1725,7 +2122,6 @@ onMounted(async () => {
   justify-content: center;
 
   color: #64748b;
-
   background: #f1f5f9;
 
   border-radius: 16px;
@@ -1737,7 +2133,6 @@ onMounted(async () => {
   color: #0f172a;
 
   font-size: 16px;
-
   font-weight: 750;
 }
 
@@ -1749,7 +2144,6 @@ onMounted(async () => {
   color: #64748b;
 
   font-size: 13px;
-
   line-height: 1.6;
 }
 
@@ -1764,17 +2158,14 @@ onMounted(async () => {
   padding: 9px 14px;
 
   border: 0;
-
   border-radius: 9px;
 
   color: #ffffff;
-
   background: #0f172a;
 
   font-family: inherit;
 
   font-size: 12px;
-
   font-weight: 700;
 
   cursor: pointer;
@@ -1815,17 +2206,14 @@ onMounted(async () => {
   padding: 8px 12px;
 
   color: #334155;
-
   background: #ffffff;
 
   border: 1px solid #cbd5e1;
-
   border-radius: 8px;
 
   font-family: inherit;
 
   font-size: 12px;
-
   font-weight: 600;
 
   cursor: pointer;
@@ -1837,13 +2225,11 @@ onMounted(async () => {
 
 .pagination button:hover:not(:disabled) {
   background: #f8fafc;
-
   border-color: #94a3b8;
 }
 
 .pagination button:disabled {
   opacity: 0.45;
-
   cursor: not-allowed;
 }
 
@@ -1886,6 +2272,10 @@ onMounted(async () => {
 
   .attendance-selector {
     padding: 18px;
+  }
+
+  .date-filter {
+    grid-template-columns: 1fr;
   }
 
   .summary-grid {
@@ -1961,6 +2351,10 @@ onMounted(async () => {
     padding: 12px 40px 12px 12px;
 
     font-size: 13px;
+  }
+
+  .date-input {
+    padding: 12px 12px 12px 38px;
   }
 
   .summary-card {
