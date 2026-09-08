@@ -73,6 +73,24 @@ const router = createRouter({
             requiresAuth: true,
           },
         },
+
+        {
+          path: "/classes/:id/payment",
+          name: "class-payment-history",
+          component: () => import("@/views/payment/PaymentHistoryView.vue"),
+          meta: {
+            requiresAuth: true,
+          },
+        },
+
+        {
+          path: "/finance/payments",
+          name: "payment-history",
+          component: () => import("@/views/payment/PaymentHistoryView.vue"),
+          meta: {
+            requiresAuth: true,
+          },
+        },
       ],
     },
 

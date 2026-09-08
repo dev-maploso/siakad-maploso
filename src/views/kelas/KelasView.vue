@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
-
+import { CreditCard } from "lucide-vue-next";
 import { useRegistrasiKelasStore } from "@/stores/registrasi-kelas";
 
 const router = useRouter();
@@ -65,7 +65,9 @@ async function reloadKelas() {
 function openKelas(id: number) {
   router.push(`/classes/${id}`);
 }
-
+function openPayment(id: number) {
+  router.push(`/classes/${id}/payment`);
+}
 /*
 |--------------------------------------------------------------------------
 | FORMAT
@@ -319,101 +321,90 @@ function getStatusClass(
 
         <div class="kelas-grid">
 
-          <article
-            v-for="item in activeKelas"
-            :key="item.id"
-            class="kelas-card kelas-card-active"
-            @click="openKelas(item.id)"
-          >
+  <article
+    v-for="item in activeKelas"
+    :key="item.id"
+    class="kelas-card kelas-card-active"
+    @click="openKelas(item.id)"
+  >
 
-            <!-- ACTIVE BAR -->
+    <!-- ACTIVE BAR -->
+    <div class="active-bar"></div>
 
-            <div class="active-bar"></div>
+    <!-- ICON -->
+    <div class="kelas-icon kelas-icon-active">
+      📖
+    </div>
 
+    <!-- CONTENT -->
+    <div class="kelas-content">
 
-            <!-- ICON -->
+      <div class="kelas-top">
 
-            <div class="kelas-icon kelas-icon-active">
-              📖
-            </div>
+        <span class="status status-active">
+          <span class="status-dot"></span>
+          Semester Aktif
+        </span>
 
+      </div>
 
-            <!-- CONTENT -->
+      <h2 class="kelas-title-active">
+        {{
+          item.kelas.nama_kelas ||
+          "Kelas tidak tersedia"
+        }}
+      </h2>
 
-            <div class="kelas-content">
+      <!-- ACADEMIC INFO -->
+      <div class="academic-info">
 
-              <div class="kelas-top">
+        <div
+          v-if="item.semester"
+          class="info-item"
+        >
+          <span class="info-label">
+            Semester
+          </span>
 
-                <span class="status status-active">
-                  <span class="status-dot"></span>
-                  Semester Aktif
-                </span>
-
-              </div>
-
-
-              <h2 class="kelas-title-active">
-                {{
-                  item.kelas.nama_kelas ||
-                  "Kelas tidak tersedia"
-                }}
-              </h2>
-
-
-              <!-- ACADEMIC INFO -->
-
-              <div class="academic-info">
-
-                <div
-                  v-if="item.semester"
-                  class="info-item"
-                >
-                  <span class="info-label">
-                    Semester
-                  </span>
-
-                  <strong>
-                    {{ item.semester.nama }}
-                  </strong>
-                </div>
-
-
-                <div
-                  v-if="item.tahun_ajaran"
-                  class="info-item"
-                >
-                  <span class="info-label">
-                    Tahun Ajaran
-                  </span>
-
-                  <strong>
-                    {{ item.tahun_ajaran.nama }}
-                  </strong>
-                </div>
-
-              </div>
-
-
-              <!-- FOOTER -->
-
-              <!-- <div class="kelas-footer kelas-footer-active">
-
-                <span>
-                  Terdaftar
-                  {{ formatTanggal(item.tanggal_registrasi) }}
-                </span>
-
-                <span class="arrow arrow-active">
-                  →
-                </span>
-
-              </div> -->
-
-            </div>
-
-          </article>
-
+          <strong>
+            {{ item.semester.nama }}
+          </strong>
         </div>
+
+        <div
+          v-if="item.tahun_ajaran"
+          class="info-item"
+        >
+          <span class="info-label">
+            Tahun Ajaran
+          </span>
+
+          <strong>
+            {{ item.tahun_ajaran.nama }}
+          </strong>
+        </div>
+
+      </div>
+
+      <!-- PAYMENT BUTTON -->
+      <div class="kelas-payment">
+
+        <button
+          type="button"
+          class="payment-button"
+          @click.stop="openPayment(item.id)"
+        >
+          <CreditCard :size="16" />
+          Pembayaran
+        </button>
+
+      </div>
+
+    </div>
+
+  </article>
+
+</div>
 
       </section>
 
@@ -1450,5 +1441,49 @@ function getStatusClass(
     width: 100%;
   }
 }
+/* ============================================================
+   PAYMENT
+============================================================ */
 
+.kelas-payment {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid #dcfce7;
+}
+
+.payment-button {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  padding: 9px 12px;
+
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+
+  background: #f0fdf4;
+  color: #166534;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.payment-button:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.payment-button:active {
+  transform: scale(0.98);
+}
 </style>
