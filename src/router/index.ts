@@ -91,6 +91,16 @@ const router = createRouter({
             requiresAuth: true,
           },
         },
+        {
+  path: "/attendance",
+  name: "attendance",
+  component: () =>
+    import("@/views/attendance/AttendanceView.vue"),
+  meta: {
+    requiresAuth: true,
+    title: "Kehadiran",
+  },
+},
       ],
     },
 
