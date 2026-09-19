@@ -99,18 +99,18 @@ const kelasItems = computed(() => {
 /**
  * Kelas yang dipilih dari dropdown.
  */
-const selectedKelas = computed(() => {
-  if (!selectedRegistrasiKelasId.value) {
-    return null;
-  }
+// const selectedKelas = computed(() => {
+//   if (!selectedRegistrasiKelasId.value) {
+//     return null;
+//   }
 
-  return (
-    kelasItems.value.find(
-      (item) =>
-        item.id === selectedRegistrasiKelasId.value
-    ) ?? null
-  );
-});
+//   return (
+//     kelasItems.value.find(
+//       (item) =>
+//         item.id === selectedRegistrasiKelasId.value
+//     ) ?? null
+//   );
+// });
 
 /**
  * =========================================================

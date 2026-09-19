@@ -7,7 +7,6 @@ import {
   Phone,
   Home,
   Users,
-  GraduationCap,
   Heart,
   BriefcaseBusiness,
   CalendarDays,

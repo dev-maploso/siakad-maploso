@@ -7,7 +7,6 @@ import {
 
 import {
   CalendarDays,
-  CheckCircle2,
   Clock3,
   UserCheck,
   UserX,

@@ -74,59 +74,59 @@ function openPayment(id: number) {
 |--------------------------------------------------------------------------
 */
 
-function formatTanggal(
-  tanggal: string | null
-): string {
-  if (!tanggal) {
-    return "-";
-  }
+// function formatTanggal(
+//   tanggal: string | null
+// ): string {
+//   if (!tanggal) {
+//     return "-";
+//   }
 
-  const date = new Date(tanggal);
+//   const date = new Date(tanggal);
 
-  if (Number.isNaN(date.getTime())) {
-    return tanggal;
-  }
+//   if (Number.isNaN(date.getTime())) {
+//     return tanggal;
+//   }
 
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  }).format(date);
-}
+//   return new Intl.DateTimeFormat("id-ID", {
+//     day: "2-digit",
+//     month: "long",
+//     year: "numeric",
+//   }).format(date);
+// }
 
-function getStatusClass(
-  status: string | null
-): string {
-  if (!status) {
-    return "status-default";
-  }
+// function getStatusClass(
+//   status: string | null
+// ): string {
+//   if (!status) {
+//     return "status-default";
+//   }
 
-  const value = status.toLowerCase();
+//   const value = status.toLowerCase();
 
-  if (
-    value === "aktif" ||
-    value === "active"
-  ) {
-    return "status-active";
-  }
+//   if (
+//     value === "aktif" ||
+//     value === "active"
+//   ) {
+//     return "status-active";
+//   }
 
-  if (
-    value === "selesai" ||
-    value === "lulus"
-  ) {
-    return "status-success";
-  }
+//   if (
+//     value === "selesai" ||
+//     value === "lulus"
+//   ) {
+//     return "status-success";
+//   }
 
-  if (
-    value === "nonaktif" ||
-    value === "inactive" ||
-    value === "dibatalkan"
-  ) {
-    return "status-danger";
-  }
+//   if (
+//     value === "nonaktif" ||
+//     value === "inactive" ||
+//     value === "dibatalkan"
+//   ) {
+//     return "status-danger";
+//   }
 
-  return "status-default";
-}
+//   return "status-default";
+// }
 </script>
 
 <template>
