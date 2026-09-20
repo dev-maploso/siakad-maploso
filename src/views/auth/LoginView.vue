@@ -2,7 +2,12 @@
 import { ref } from "vue";
 import { AxiosError } from "axios";
 import { useRouter } from "vue-router";
+
 import { useAuthStore } from "@/stores/auth";
+
+import LoginBrandPanel from "@/components/auth/LoginBrandPanel.vue";
+import LoginForm from "@/components/auth/LoginForm.vue";
+import LoginFooter from "@/components/auth/LoginFooter.vue";
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -24,146 +29,122 @@ const onSubmit = async () => {
 
     router.replace("/dashboard");
   } catch (err) {
-    const axiosError = err as AxiosError<any>;
+    const axiosError = err as AxiosError<{ message?: string }>;
 
     error.value =
       axiosError.response?.data?.message ??
-      "Login gagal. Silakan coba lagi.";
+      "Login gagal. Silakan periksa kembali email dan password Anda.";
   }
 };
 </script>
 
 <template>
   <div class="login-page">
-    <div class="login-card">
-      <h1>Login Mahasantri</h1>
-      <p>Silakan masuk menggunakan akun Anda.</p>
+    <main class="login-layout">
+      <LoginBrandPanel />
 
-      <div
-        v-if="error"
-        class="alert"
-      >
-        {{ error }}
-      </div>
-
-      <form @submit.prevent="onSubmit">
-        <div class="form-group">
-          <label>Email</label>
-
-          <input
-            v-model="email"
-            type="email"
-            placeholder="email@example.com"
-            autocomplete="email"
-            required
+      <section class="login-section">
+        <div class="login-container">
+          <LoginForm
+            v-model:email="email"
+            v-model:password="password"
+            :error="error"
+            :loading="auth.loading"
+            @submit="onSubmit"
           />
+
+          <LoginFooter />
         </div>
-
-        <div class="form-group">
-          <label>Password</label>
-
-          <input
-            v-model="password"
-            type="password"
-            placeholder="********"
-            autocomplete="current-password"
-            required
-          />
-        </div>
-
-        <button
-          type="submit"
-          :disabled="auth.loading"
-        >
-          {{ auth.loading ? "Masuk..." : "Masuk" }}
-        </button>
-      </form>
-    </div>
+      </section>
+    </main>
   </div>
 </template>
 
 <style scoped>
 .login-page {
-  min-height: 100vh;
+  width: 100%;
+  min-height: 100dvh;
+
+  background: #f8fafc;
+  color: #1e293b;
+
+  overflow: hidden;
+}
+
+.login-layout {
+  width: 100%;
+  height: 100dvh;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(420px, 0.9fr);
+}
+
+/* LEFT */
+.brand-panel {
+  height: 100dvh;
+}
+
+/* RIGHT */
+.login-section {
+  height: 100dvh;
+
   display: flex;
-  justify-content: center;
   align-items: center;
-  background: #f5f5f5;
-  padding: 24px;
+  justify-content: center;
+
+  padding: 32px 48px;
+
+  background: #ffffff;
+
+  overflow: hidden;
 }
 
-.login-card {
+.login-container {
   width: 100%;
-  max-width: 420px;
-  background: white;
-  padding: 32px;
-  border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  max-width: 430px;
 }
 
-.login-card h1 {
-  margin: 0;
-  font-size: 26px;
+/* Laptop */
+@media (max-width: 1100px) and (min-width: 901px) {
+  .login-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(390px, 0.8fr);
+  }
+
+  .login-section {
+    padding: 28px 36px;
+  }
+
+  .login-container {
+    max-width: 400px;
+  }
 }
 
-.login-card p {
-  margin-top: 8px;
-  margin-bottom: 28px;
-  color: #666;
+/* Mobile / tablet */
+@media (max-width: 900px) {
+  .login-page {
+    overflow: auto;
+  }
+
+  .login-layout {
+    min-height: 100dvh;
+    height: auto;
+
+    display: block;
+  }
+
+  .login-section {
+    min-height: 100dvh;
+    height: auto;
+
+    padding: 32px 24px;
+
+    overflow: visible;
+  }
 }
 
-.alert {
-  margin-bottom: 18px;
-  padding: 12px;
-  border-radius: 8px;
-  background: #fee2e2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
-  font-size: 14px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 18px;
-}
-
-label {
-  margin-bottom: 8px;
-  font-weight: 600;
-}
-
-input {
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 15px;
-}
-
-input:focus {
-  outline: none;
-  border-color: #2563eb;
-}
-
-button {
-  width: 100%;
-  padding: 13px;
-  border: none;
-  border-radius: 8px;
-  background: #2563eb;
-  color: white;
-  cursor: pointer;
-  font-size: 15px;
-  font-weight: 600;
-  transition: 0.2s;
-}
-
-button:hover:not(:disabled) {
-  background: #1d4ed8;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+@media (max-width: 480px) {
+  .login-section {
+    padding: 24px 20px;
+  }
 }
 </style>
