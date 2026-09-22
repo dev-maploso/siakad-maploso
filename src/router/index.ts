@@ -38,6 +38,9 @@ const router = createRouter({
       },
 
       children: [
+        /**
+         * Dashboard
+         */
         {
           path: "",
           redirect: {
@@ -48,59 +51,185 @@ const router = createRouter({
         {
           path: "dashboard",
           name: "dashboard",
-          component: () => import("@/views/dashboard/DashboardView.vue"),
+          component: () =>
+            import("@/views/dashboard/DashboardView.vue"),
 
           meta: {
             title: "Dashboard",
           },
         },
 
+        /**
+         * Profil
+         */
         {
           path: "profile",
           name: "profile",
-          component: () => import("@/views/profile/ProfileView.vue"),
+          component: () =>
+            import("@/views/profile/ProfileView.vue"),
 
           meta: {
             title: "Profil",
           },
         },
 
+        /**
+         * =========================
+         * KELAS
+         * =========================
+         */
         {
-          path: "/classes",
+          path: "classes",
           name: "classes",
-          component: () => import("@/views/kelas/KelasView.vue"),
+          component: () =>
+            import("@/views/kelas/KelasView.vue"),
+
           meta: {
-            requiresAuth: true,
+            title: "Kelas",
           },
         },
 
+        /**
+         * Detail pembayaran dari kelas
+         */
         {
-          path: "/classes/:id/payment",
+          path: "classes/:id/payment",
           name: "class-payment-history",
-          component: () => import("@/views/payment/PaymentHistoryView.vue"),
+          component: () =>
+            import("@/views/payment/PaymentHistoryView.vue"),
+
           meta: {
-            requiresAuth: true,
+            title: "Riwayat Pembayaran",
           },
         },
 
+        /**
+         * =========================
+         * JADWAL KULIAH
+         * =========================
+         */
         {
-          path: "/finance/payments",
-          name: "payment-history",
-          component: () => import("@/views/payment/PaymentHistoryView.vue"),
+          path: "schedule",
+          name: "schedule",
+          component: () =>
+            import("@/views/schedule/ScheduleView.vue"),
+
           meta: {
-            requiresAuth: true,
+            title: "Jadwal Kuliah",
           },
         },
+
+        /**
+         * =========================
+         * MATA KULIAH
+         * =========================
+         */
         {
-  path: "/attendance",
-  name: "attendance",
-  component: () =>
-    import("@/views/attendance/AttendanceView.vue"),
-  meta: {
-    requiresAuth: true,
-    title: "Kehadiran",
-  },
-},
+          path: "courses",
+          name: "courses",
+          component: () =>
+            import("@/views/courses/CoursesView.vue"),
+
+          meta: {
+            title: "Mata Kuliah",
+          },
+        },
+
+        /**
+         * =========================
+         * KEHADIRAN
+         * =========================
+         */
+        {
+          path: "attendance",
+          name: "attendance",
+          component: () =>
+            import("@/views/attendance/AttendanceView.vue"),
+
+          meta: {
+            title: "Kehadiran",
+          },
+        },
+
+        /**
+         * =========================
+         * PENGUMUMAN
+         * =========================
+         */
+        {
+          path: "announcements",
+          name: "announcements",
+          component: () =>
+            import("@/views/announcements/AnnouncementsView.vue"),
+
+          meta: {
+            title: "Pengumuman",
+          },
+        },
+
+        /**
+         * =========================
+         * AKADEMIK
+         * =========================
+         */
+
+        /**
+         * KRS / Kartu Studi
+         */
+        {
+          path: "academic/krs",
+          name: "academic-krs",
+          component: () =>
+            import("@/views/academic/KrsView.vue"),
+
+          meta: {
+            title: "KRS / Kartu Studi",
+          },
+        },
+
+        /**
+         * Nilai / KHS
+         */
+        {
+          path: "academic/grades",
+          name: "academic-grades",
+          component: () =>
+            import("@/views/academic/GradesView.vue"),
+
+          meta: {
+            title: "Nilai / KHS",
+          },
+        },
+
+        /**
+         * Transkrip Nilai
+         */
+        {
+          path: "academic/transcript",
+          name: "academic-transcript",
+          component: () =>
+            import("@/views/academic/TranscriptView.vue"),
+
+          meta: {
+            title: "Transkrip Nilai",
+          },
+        },
+
+        /**
+         * =========================
+         * PEMBAYARAN
+         * =========================
+         */
+        {
+          path: "finance/payments",
+          name: "payment-history",
+          component: () =>
+            import("@/views/payment/PaymentHistoryView.vue"),
+
+          meta: {
+            title: "Pembayaran",
+          },
+        },
       ],
     },
 

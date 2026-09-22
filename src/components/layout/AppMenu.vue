@@ -7,13 +7,12 @@ import {
   ClipboardList,
   GraduationCap,
   FileText,
-  Wallet,
-  CreditCard,
   Megaphone,
   User,
   LogOut,
   ChevronDown,
   School,
+  CreditCard,
 } from "lucide-vue-next";
 
 import { ref } from "vue";
@@ -29,7 +28,6 @@ const router = useRouter();
 const auth = useAuthStore();
 
 const akademikOpen = ref(true);
-const keuanganOpen = ref(false);
 
 const menus = [
   {
@@ -97,24 +95,14 @@ const akademikMenus = [
   },
 ];
 
-const keuanganMenus = [
+const bottomMenus = [
   {
-    title: "Tagihan",
-    icon: Wallet,
-    to: "/finance/bills",
-    match: (path: string) =>
-      path.startsWith("/finance/bills"),
-  },
-  {
-    title: "Riwayat Pembayaran",
+    title: "Pembayaran",
     icon: CreditCard,
     to: "/finance/payments",
     match: (path: string) =>
-      path.startsWith("/finance/payments"),
+      path.startsWith("/finance"),
   },
-];
-
-const bottomMenus = [
   {
     title: "Profil",
     icon: User,
@@ -136,21 +124,9 @@ const isAkademikActive = () => {
   );
 };
 
-const isKeuanganActive = () => {
-  return keuanganMenus.some((menu) =>
-    menu.match(route.path)
-  );
-};
-
 const toggleAkademik = () => {
   if (!props.collapsed) {
     akademikOpen.value = !akademikOpen.value;
-  }
-};
-
-const toggleKeuangan = () => {
-  if (!props.collapsed) {
-    keuanganOpen.value = !keuanganOpen.value;
   }
 };
 
@@ -168,11 +144,22 @@ const logout = async () => {
     ========================== -->
     <div class="menu-top">
 
-      <RouterLink v-for="menu in menus" :key="menu.to" :to="menu.to" class="menu-item" :class="{
-        active: isActive(menu),
-        collapsed,
-      }" :title="collapsed ? menu.title : ''">
-        <component :is="menu.icon" :size="20" class="icon" />
+      <RouterLink
+        v-for="menu in menus"
+        :key="menu.to"
+        :to="menu.to"
+        class="menu-item"
+        :class="{
+          active: isActive(menu),
+          collapsed,
+        }"
+        :title="collapsed ? menu.title : ''"
+      >
+        <component
+          :is="menu.icon"
+          :size="20"
+          class="icon"
+        />
 
         <span v-if="!collapsed" class="label">
           {{ menu.title }}
@@ -185,24 +172,49 @@ const logout = async () => {
       ========================== -->
       <div class="menu-section">
 
-        <button class="menu-item section-header" :class="{
-          active: isAkademikActive(),
-          collapsed,
-        }" :title="collapsed ? 'Akademik' : ''" @click="toggleAkademik">
-          <GraduationCap :size="20" class="icon" />
+        <button
+          class="menu-item section-header"
+          :class="{
+            active: isAkademikActive(),
+            collapsed,
+          }"
+          :title="collapsed ? 'Akademik' : ''"
+          @click="toggleAkademik"
+        >
+          <GraduationCap
+            :size="20"
+            class="icon"
+          />
 
           <span v-if="!collapsed" class="label">
             Akademik
           </span>
 
-          <ChevronDown v-if="!collapsed" :size="16" class="section-arrow" :class="{ rotate: akademikOpen }" />
+          <ChevronDown
+            v-if="!collapsed"
+            :size="16"
+            class="section-arrow"
+            :class="{ rotate: akademikOpen }"
+          />
         </button>
 
 
-        <div v-if="!collapsed && akademikOpen" class="submenu">
-          <RouterLink v-for="menu in akademikMenus" :key="menu.to" :to="menu.to" class="submenu-item"
-            :class="{ active: isActive(menu) }">
-            <component :is="menu.icon" :size="17" class="icon" />
+        <div
+          v-if="!collapsed && akademikOpen"
+          class="submenu"
+        >
+          <RouterLink
+            v-for="menu in akademikMenus"
+            :key="menu.to"
+            :to="menu.to"
+            class="submenu-item"
+            :class="{ active: isActive(menu) }"
+          >
+            <component
+              :is="menu.icon"
+              :size="17"
+              class="icon"
+            />
 
             <span class="label">
               {{ menu.title }}
@@ -214,36 +226,26 @@ const logout = async () => {
 
 
       <!-- =========================
-           KEUANGAN
+           PEMBAYARAN
       ========================== -->
-      <div class="menu-section">
-
-        <button class="menu-item section-header" :class="{
-          active: isKeuanganActive(),
+      <RouterLink
+        to="/finance/payments"
+        class="menu-item"
+        :class="{
+          active: route.path.startsWith('/finance'),
           collapsed,
-        }" :title="collapsed ? 'Keuangan' : ''" @click="toggleKeuangan">
-          <Wallet :size="20" class="icon" />
+        }"
+        :title="collapsed ? 'Pembayaran' : ''"
+      >
+        <CreditCard
+          :size="20"
+          class="icon"
+        />
 
-          <span v-if="!collapsed" class="label">
-            Keuangan
-          </span>
-
-          <ChevronDown v-if="!collapsed" :size="16" class="section-arrow" :class="{ rotate: keuanganOpen }" />
-        </button>
-
-
-        <div v-if="!collapsed && keuanganOpen" class="submenu">
-          <RouterLink v-for="menu in keuanganMenus" :key="menu.to" :to="menu.to" class="submenu-item"
-            :class="{ active: isActive(menu) }">
-            <component :is="menu.icon" :size="17" class="icon" />
-
-            <span class="label">
-              {{ menu.title }}
-            </span>
-          </RouterLink>
-        </div>
-
-      </div>
+        <span v-if="!collapsed" class="label">
+          Pembayaran
+        </span>
+      </RouterLink>
 
     </div>
 
@@ -253,11 +255,24 @@ const logout = async () => {
     ========================== -->
     <div class="menu-bottom">
 
-      <RouterLink v-for="menu in bottomMenus" :key="menu.to" :to="menu.to" class="menu-item" :class="{
-        active: isActive(menu),
-        collapsed,
-      }" :title="collapsed ? menu.title : ''">
-        <component :is="menu.icon" :size="20" class="icon" />
+      <RouterLink
+        v-for="menu in bottomMenus.filter(
+          (menu) => menu.title === 'Profil'
+        )"
+        :key="menu.to"
+        :to="menu.to"
+        class="menu-item"
+        :class="{
+          active: isActive(menu),
+          collapsed,
+        }"
+        :title="collapsed ? menu.title : ''"
+      >
+        <component
+          :is="menu.icon"
+          :size="20"
+          class="icon"
+        />
 
         <span v-if="!collapsed" class="label">
           {{ menu.title }}
@@ -266,8 +281,16 @@ const logout = async () => {
 
 
       <!-- LOGOUT -->
-      <button class="menu-item logout" :class="{ collapsed }" :title="collapsed ? 'Logout' : ''" @click="logout">
-        <LogOut :size="20" class="icon" />
+      <button
+        class="menu-item logout"
+        :class="{ collapsed }"
+        :title="collapsed ? 'Logout' : ''"
+        @click="logout"
+      >
+        <LogOut
+          :size="20"
+          class="icon"
+        />
 
         <span v-if="!collapsed" class="label">
           Logout
